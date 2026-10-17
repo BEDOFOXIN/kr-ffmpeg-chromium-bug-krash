@@ -34,6 +34,7 @@ ID_TRACKS = 0x1654AE6B
 ID_TRACKENTRY = 0xAE
 ID_TRACKNUMBER = 0xD7
 ID_TRACKTYPE = 0x83
+ID_TIMESTAMP = 0xE7
 
 
 def read_uint(data, pos, size):
@@ -135,6 +136,7 @@ def main(argv):
     discard_ns = -21354167  # = -1025 samples @ 48 kHz, exactly as in cat.webm
     keep_keyframe = False
     start_index = None
+    min_step_ms = 0
     args = argv[3:]
     i = 0
     while i < len(args):
@@ -145,6 +147,8 @@ def main(argv):
             discard_ns = int(args[i + 1]); i += 2; continue
         if a == "--start-index" and i + 1 < len(args):
             start_index = int(args[i + 1]); i += 2; continue
+        if a == "--min-step-ms" and i + 1 < len(args):
+            min_step_ms = int(args[i + 1]); i += 2; continue
         if a == "--positive":
             discard_ns = abs(discard_ns); i += 1; continue
         if a == "--keep-keyframe-flag":
@@ -172,18 +176,22 @@ def main(argv):
 
     children = list(iter_elements(data, seg_content, seg_content + seg_size))
 
-    # Collect every audio SimpleBlock as (cluster_idx, offset, end).
+    # Collect every audio SimpleBlock as (cluster_idx, offset, content, size, abs_ts).
     refs = []
     cluster_of = {}
     for ci, (eid, pos, content, size, total) in enumerate(children):
         if eid != ID_CLUSTER:
             continue
+        cluster_ts = 0
+        for cid, cpo, cc, cs, ct in iter_elements(data, content, content + size):
+            if cid == ID_TIMESTAMP:
+                cluster_ts = int.from_bytes(data[cc:cc + cs], "big")
         for cid, cpo, cc, cs, ct in iter_elements(data, content, content + size):
             if cid != ID_SIMPLEBLOCK:
                 continue
             track, track_len, rel, flags, payload = parse_block(data, cc, cs)
             if track == audio_track:
-                refs.append((ci, cpo, cc, cs))
+                refs.append((ci, cpo, cc, cs, cluster_ts + rel))
                 cluster_of.setdefault(ci, []).append(cpo)
 
     if len(refs) < count:
@@ -191,13 +199,30 @@ def main(argv):
         return 1
 
     if start_index is None:
-        sel = refs[-count:]
-    else:
-        if start_index + count > len(refs):
-            print("start-index %d + count %d exceeds %d audio blocks" % (
-                start_index, count, len(refs)), file=sys.stderr)
+        start_index = max(0, len(refs) - count)
+
+    # Advance start_index until the selected run of `count` blocks has
+    # inter-block steps >= min_step_ms (used to avoid micro blocks).
+    if min_step_ms > 0:
+        while start_index + count <= len(refs):
+            steps = [refs[start_index + k][4] - refs[start_index + k - 1][4]
+                     for k in range(1, count)]
+            if all(s >= min_step_ms for s in steps):
+                break
+            start_index += 1
+        else:
+            print("no run of %d blocks with step >= %d ms" % (count, min_step_ms), file=sys.stderr)
             return 1
-        sel = refs[start_index:start_index + count]
+
+    if start_index + count > len(refs):
+        print("start-index %d + count %d exceeds %d audio blocks" % (
+            start_index, count, len(refs)), file=sys.stderr)
+        return 1
+
+    sel = refs[start_index:start_index + count]
+    print("selected blocks at indices %d..%d (abs_ts=%s)" % (
+        start_index, start_index + count - 1,
+        [r[4] for r in sel]))
 
     targets = set(r[1] for r in sel)  # SimpleBlock offsets to wrap
 
