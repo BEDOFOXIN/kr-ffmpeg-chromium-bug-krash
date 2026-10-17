@@ -42,7 +42,9 @@ def read_uint(data, pos, size):
 
 def encode_size(value):
     for length in range(1, 9):
-        if value <= (1 << (7 * length)) - 1:
+        maxv = (1 << (7 * length)) - 1
+        # maxv is the reserved "unknown size" (all-ones) value; skip it.
+        if value <= maxv and value != maxv:
             return encode_vint(value, length)
     raise ValueError("size too large: %d" % value)
 

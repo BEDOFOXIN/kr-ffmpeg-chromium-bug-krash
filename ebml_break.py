@@ -89,8 +89,10 @@ def make_void(total_size):
     """Build a ``Void`` element occupying exactly ``total_size`` bytes."""
     remaining = total_size - 1  # bytes left for the size field + payload
     for length in range(1, 9):
+        maxv = (1 << (7 * length)) - 1
         payload = remaining - length
-        if 0 <= payload <= (1 << (7 * length)) - 1:
+        # maxv is the reserved "unknown size" (all-ones) value; skip it.
+        if 0 <= payload <= maxv and payload != maxv:
             return bytes([ID_VOID]) + encode_vint(payload, length) + b"\x00" * payload
     raise ValueError("cannot encode a %d-byte Void element" % total_size)
 
